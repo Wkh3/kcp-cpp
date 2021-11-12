@@ -7,6 +7,9 @@ bin-release/
 # Other files and folders
 .settings/
 .vscode/
+.clangd/
+build/
+compile_commands.json
 # Executables
 *.swf
 *.air
