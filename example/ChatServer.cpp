@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-12 23:22:23
- * @LastEditTime: 2021-11-13 01:56:53
+ * @LastEditTime: 2021-11-13 11:59:58
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/ChatServer.cpp
@@ -24,6 +24,7 @@ public:
 
         void MessageCallBack(kcp::Kcp<true>::ptr pcon,KcpServer::Addr addr,std::string msg)
         {
+            TRACE(msg);
             std::stringstream ss;
             ss << "user from [" << addr.first << ":" << addr.second << "] : " << msg;
             Notify(ss.str());
@@ -41,6 +42,7 @@ public:
         }
         void CloseCallBack(kcp::Kcp<true>::ptr pcon,KcpServer::Addr addr)
         {   
+            TRACE("close ",addr.first,addr.second);
             {
                 Lock lock(mtx_);
                 users_.erase(pcon);

@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-12 23:22:10
- * @LastEditTime: 2021-11-13 01:50:29
+ * @LastEditTime: 2021-11-13 12:09:33
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/ChatClient.cpp
@@ -29,6 +29,8 @@ public:
           }         
           t.join();
       }
+
+      
 
       void MessageCallBack(std::string msg)
       {

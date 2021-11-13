@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-13 01:06:27
- * @LastEditTime: 2021-11-13 01:53:30
+ * @LastEditTime: 2021-11-13 12:20:17
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/KcpClient.hpp
@@ -37,6 +37,7 @@ public:
 
                  if(kcp_->Update(clock()))
                  {
+                     TRACE("offline")
                      if(close_cb_)
                         close_cb_();
                      
@@ -95,7 +96,7 @@ private:
         }
         void Init()
         {
-            fd_ = socket(AF_INET, SOCK_DGRAM, 0);
+            fd_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
             if (fd_ == -1)
                 perror("create socket failed!");
@@ -109,10 +110,10 @@ private:
 
             kcp::KcpOpt opt;
             opt.conv                = conv_;
-            opt.interval            = 10;
+            opt.interval            = 100;
             opt.trigger_fast_resend = 3;
             opt.nodelay             = true;
-            opt.offline_standard    = 5;
+            opt.offline_standard    = 500;
 
             opt.send_func           = [this](const void *data,std::size_t size,void *)
             {

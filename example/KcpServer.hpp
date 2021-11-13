@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-11 21:27:17
- * @LastEditTime: 2021-11-13 02:14:45
+ * @LastEditTime: 2021-11-13 12:17:48
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/KcpServer.hpp
@@ -40,7 +40,7 @@ public:
          char buf[1024 * 4];
          sockaddr_in addr;
          memset(&addr,0,sizeof(addr));
-         socklen_t   sock_len;
+         socklen_t   sock_len = sizeof(addr);
          pool_.Start(4);
 
          while (1)
@@ -137,15 +137,13 @@ private:
       kcp::Kcp<true>::ptr NewClient(sockaddr_in &addr,socklen_t socklen)
       {
          kcp::KcpOpt opt;
-         opt.trigger_fast_resend = 3;
-         opt.nodelay             = true;
-         opt.interval            = 10;
+         opt.interval            = 50;
          opt.conv                = conv_;
+         opt.offline_standard    = 5000000;
 
          opt.send_func = [addr,socklen,this](const void *data, std::size_t size, void *kcp)
          {
             int len = sendto(fd_, data, size, 0, (sockaddr *)&addr,socklen);
-
             if (len == -1)
             {
                   perror("sendto error!");
@@ -157,7 +155,7 @@ private:
       }
       void Init()
       {
-         fd_ = socket(AF_INET, SOCK_DGRAM, 0);
+         fd_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
          if (fd_ == -1)
             perror("create socket failed!");

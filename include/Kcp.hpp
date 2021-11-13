@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 16:31:14
- * @LastEditTime: 2021-11-12 21:24:58
+ * @LastEditTime: 2021-11-13 12:19:12
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/Kcp.hpp
@@ -184,10 +184,10 @@ namespace kcp{
                   length += hdr->len;
 
                   if(hdr->frg == 0)
-                     return length;
+                     break;
             }
 
-
+            return length;
       }
      
        template<bool ThreadSafe>
@@ -539,7 +539,7 @@ namespace kcp{
                                            seg->data->una = rcv_next_.load(std::memory_order_relaxed);
                                            buf_.push_back(seg->data);
 
-                                           if (seg->mit >= KcpAttr::KCP_OFFLINE_STANDARD)
+                                           if (seg->mit >= opt_.offline_standard)
                                               Close(); 
                                      }
                                });
