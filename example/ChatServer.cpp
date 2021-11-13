@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-12 23:22:23
- * @LastEditTime: 2021-11-13 11:59:58
+ * @LastEditTime: 2021-11-13 13:38:04
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/ChatServer.cpp
@@ -46,7 +46,7 @@ public:
             {
                 Lock lock(mtx_);
                 users_.erase(pcon);
-            }   
+            }
             std::stringstream ss;
             ss << "user from [" << addr.first << ":" << addr.second << "] : " << "left the KcpChatRoom!";
             Notify(ss.str());

@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 16:31:14
- * @LastEditTime: 2021-11-13 12:19:12
+ * @LastEditTime: 2021-11-13 13:30:31
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/Kcp.hpp
@@ -147,7 +147,6 @@ namespace kcp{
 
             do
             {
-
                 memcpy(des + len,it->get()->buf,it->get()->len);
 
                 len += it->get()->len;
@@ -535,12 +534,18 @@ namespace kcp{
                                      if (CheckSeg(seg, lost, fast_resend))
                                      {
                                            seg->data->ts  = current_;
+                                           seg->mit++;
                                            seg->data->wnd = GetWndSize();
                                            seg->data->una = rcv_next_.load(std::memory_order_relaxed);
                                            buf_.push_back(seg->data);
-
+                                           
                                            if (seg->mit >= opt_.offline_standard)
+                                           {
+                                              TRACE("mit = ",seg->mit);
+                                              TRACE("sn = ",seg->data->sn);
+                                              TRACE("len = ",seg->data->len);
                                               Close(); 
+                                           }
                                      }
                                });
             
@@ -568,7 +573,7 @@ namespace kcp{
              //first send
              if (seg->mit == 0)
              {
-                   seg->mit++;
+                  
                    seg->rto = rx_rto_.load(std::memory_order_relaxed);
                    seg->rts = current_ + seg->rto + rto_min;
 
@@ -579,7 +584,6 @@ namespace kcp{
              if (current_ - seg->rts >= 0)
              {
                    lost = true;
-                   seg->mit++;
 
                    seg->rto += opt_.nodelay ? seg->rto / 2 : std::max(seg->rto, rx_rto_.load(std::memory_order_relaxed));
                    seg->rts = current_ + seg->rto;
@@ -592,7 +596,6 @@ namespace kcp{
 
              if (seg->fack >= opt_.trigger_fast_resend && seg->mit < opt_.fast_resend_limit)
              {
-                   seg->mit++;
                    seg->fack = 0;
                    seg->rts = current_ + seg->rto;
                    fast_resend = true;

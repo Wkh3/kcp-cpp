@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-13 01:06:27
- * @LastEditTime: 2021-11-13 12:46:19
+ * @LastEditTime: 2021-11-13 13:57:55
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/KcpClient.hpp
@@ -22,8 +22,12 @@ public:
         using MessageCallBack = std::function<void(std::string msg)>;
         using CloseCallBack   = std::function<void()>;
 
-        KcpClient(const std::string &ip,uint16_t port,uint16_t conv) : ip_(ip), port_(port),conv_(conv)
+        KcpClient(const std::string &ip,uint16_t port,uint16_t conv) : ip_(ip), server_port_(port),conv_(conv)
         {
+            server_addr_.sin_family = AF_INET;
+            server_addr_.sin_port = htons(server_port_);
+            server_addr_.sin_addr.s_addr = inet_addr(ip_.c_str());
+            
             Init();
         }
         
@@ -47,7 +51,7 @@ public:
                  
                  socklen_t socklen;
 
-                 int len = recvfrom(fd_,const_cast<char*>(buf.data()),buf.length(),0,(sockaddr*)&addr_,&socklen);
+                 int len = recvfrom(fd_,const_cast<char*>(buf.data()),buf.length(),0,(sockaddr*)&server_addr_,&socklen);
 
                  if(CheckError(len))
                    continue;
@@ -100,9 +104,6 @@ private:
             if (fd_ == -1)
                 perror("create socket failed!");
 
-            addr_.sin_family = AF_INET;
-            addr_.sin_port = htons(port_);
-            addr_.sin_addr.s_addr = inet_addr(ip_.c_str());
 
             int flag = fcntl(fd_, F_GETFL);
             fcntl(fd_, F_SETFL, flag | O_NONBLOCK);
@@ -114,9 +115,21 @@ private:
             opt.nodelay             = true;
             opt.offline_standard    = 500;
 
+            sockaddr_in client_addr;
+            client_addr.sin_family        = AF_INET;
+            client_addr.sin_addr.s_addr   = htonl(INADDR_ANY);
+            client_addr.sin_port          = 0;
+
+            if(bind(fd_,(sockaddr*)&client_addr,sizeof(client_addr)) == -1)
+            {
+                perror("bind error");
+                exit(-1);
+            }
+            
+
             opt.send_func           = [this](const void *data,std::size_t size,void *)
             {
-                    int len = sendto(fd_,data,size,0,(sockaddr*)&addr_,sizeof(addr_));
+                    int len = sendto(fd_,data,size,0,(sockaddr*)&server_addr_,sizeof(server_addr_));
 
                     if(len == -1)
                       perror("sendto error!");
@@ -130,8 +143,8 @@ private:
         CloseCallBack        close_cb_;
         int                  fd_;
         std::string          ip_;
-        sockaddr_in          addr_;
-        uint16_t             port_;
+        sockaddr_in          server_addr_;
+        uint16_t             server_port_;
         uint16_t             conv_;
         kcp::Kcp<true>::ptr  kcp_;
 

@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 18:54:01
- * @LastEditTime: 2021-11-13 01:22:56
+ * @LastEditTime: 2021-11-13 12:54:38
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/KcpHdr.hpp
@@ -96,7 +96,7 @@ namespace kcp
             //need send IKCP_ASK_TELL
             constexpr static uint32_t KCP_ASK_TELL = 2;
             //send queue max size
-            constexpr static uint32_t KCP_SND_QUEUE_MAX_SIZE = 100;
+            constexpr static uint32_t KCP_SND_QUEUE_MAX_SIZE = 1024;
             //Header size
             constexpr static uint32_t KCP_HEADER_SIZE = sizeof(KcpHdr);
             //connection state online

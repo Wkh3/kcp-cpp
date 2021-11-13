@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-11 21:27:17
- * @LastEditTime: 2021-11-13 12:33:27
+ * @LastEditTime: 2021-11-13 13:59:33
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/KcpServer.hpp
@@ -45,7 +45,7 @@ public:
 
          while (1)
          {
-            usleep(10);
+            usleep(50);
 
             Update();
 
@@ -84,7 +84,7 @@ private:
                it = kcp_map_.erase(it);
             }else
             {
-               it++;
+               ++it;
             }
          }
       }
@@ -94,6 +94,7 @@ private:
             std::stringstream ss;
 
             Addr user_addr{inet_ntoa(addr.sin_addr),ntohs(addr.sin_port)};
+
 
             if (kcp_map_.find(user_addr) == kcp_map_.end())
             {
