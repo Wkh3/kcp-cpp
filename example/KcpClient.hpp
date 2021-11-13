@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-13 01:06:27
- * @LastEditTime: 2021-11-13 12:20:17
+ * @LastEditTime: 2021-11-13 12:40:39
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/KcpClient.hpp
@@ -33,7 +33,7 @@ public:
         {
             while(1)
             {
-                 usleep(10);
+                 usleep(50);
 
                  if(kcp_->Update(clock()))
                  {
@@ -110,7 +110,7 @@ private:
 
             kcp::KcpOpt opt;
             opt.conv                = conv_;
-            opt.interval            = 100;
+            opt.interval            = 50;
             opt.trigger_fast_resend = 3;
             opt.nodelay             = true;
             opt.offline_standard    = 500;

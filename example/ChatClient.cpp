@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-12 23:22:10
- * @LastEditTime: 2021-11-13 12:09:33
+ * @LastEditTime: 2021-11-13 12:40:12
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/ChatClient.cpp
@@ -31,7 +31,11 @@ public:
       }
 
       
-
+      void CloseCallBack()
+      {
+          std::cout << "close kcp connection!" << std::endl;
+          exit(-1);
+      }
       void MessageCallBack(std::string msg)
       {
           std::cout << msg << std::endl;

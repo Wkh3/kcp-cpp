@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-11 21:27:17
- * @LastEditTime: 2021-11-13 12:17:48
+ * @LastEditTime: 2021-11-13 12:33:27
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/KcpServer.hpp
@@ -139,7 +139,7 @@ private:
          kcp::KcpOpt opt;
          opt.interval            = 50;
          opt.conv                = conv_;
-         opt.offline_standard    = 5000000;
+         opt.offline_standard    = 1000;
 
          opt.send_func = [addr,socklen,this](const void *data, std::size_t size, void *kcp)
          {
