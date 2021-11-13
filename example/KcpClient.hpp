@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-13 01:06:27
- * @LastEditTime: 2021-11-13 12:40:39
+ * @LastEditTime: 2021-11-13 12:46:19
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/KcpClient.hpp
@@ -37,7 +37,6 @@ public:
 
                  if(kcp_->Update(clock()))
                  {
-                     TRACE("offline")
                      if(close_cb_)
                         close_cb_();
                      

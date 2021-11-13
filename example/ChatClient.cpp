@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-12 23:22:10
- * @LastEditTime: 2021-11-13 12:40:12
+ * @LastEditTime: 2021-11-13 12:45:58
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/ChatClient.cpp
@@ -16,6 +16,7 @@ public:
       ChatClient(const std::string &ip,uint16_t port,uint16_t conv) : client_(ip,port,conv)
       {
           client_.SetMessageCallBack(std::bind(&ChatClient::MessageCallBack,this,std::placeholders::_1));
+          client_.SetCoseCallBack(std::bind(&ChatClient::CloseCallBack,this));
       }
       void Start()
       {
