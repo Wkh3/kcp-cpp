@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-11 21:27:17
- * @LastEditTime: 2021-11-13 13:59:33
+ * @LastEditTime: 2021-11-15 23:20:16
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/KcpServer.hpp
@@ -15,172 +15,218 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <unordered_map>
 #include <string.h>
 #include <Kcp.hpp>
+#include <vector>
 #include <map>
+#include <time.h>
+#include <sys/time.h>
+#include "UdpSocket.hpp"
 #include "ThreadPool.hpp"
+
+class KcpSession : public kcp::Kcp<true>
+{
+public:
+    
+      using ptr  = std::shared_ptr<KcpSession>;
+
+      KcpSession(const kcp::KcpOpt &opt,const sockaddr_in &addr,const UdpSocket::ptr &socket);
+
+      const sockaddr_in& GetAddr() const { return addr_;}
+
+      std::string GetAddrToString() const;
+
+      void SetAddr(const sockaddr_in &addr) {addr_ = addr;}
+private:
+      sockaddr_in          addr_;
+      UdpSocket::ptr       socket_;
+};
+
 class KcpServer
 {
-   
 public:
-        using Addr               = std::pair<std::string,uint16_t>;
-        using MessageCallBack    = std::function<void(kcp::Kcp<true>::ptr,KcpServer::Addr,std::string)>;
-        using NewClientCallBack  = std::function<void(kcp::Kcp<true>::ptr,KcpServer::Addr)>;
-        using CloseCallBack      = std::function<void(kcp::Kcp<true>::ptr,KcpServer::Addr)>;
-public:
-      KcpServer(const std::string &ip, uint16_t port, uint16_t conv) : ip_(ip),
-                                                                       port_(port),
-                                                                       conv_(conv)
-      {
-          Init();
-      }
+        KcpServer(const std::string &ip,uint16_t port);
+        
+        void Run(std::size_t threads);
+private:
+        void            Update();
+        bool            Check(int ret);
+        void            HandleSession(const KcpSession::ptr &session,int length);
+        uint64_t        GetConv(const void *data);
+        KcpSession::ptr GetSession(uint64_t conv,const sockaddr_in &addr);
+        KcpSession::ptr NewSession(uint64_t conv,const sockaddr_in &addr);
 
-      void Run()
-      {
-         char buf[1024 * 4];
-         sockaddr_in addr;
-         memset(&addr,0,sizeof(addr));
-         socklen_t   sock_len = sizeof(addr);
-         pool_.Start(4);
-
-         while (1)
-         {
-            usleep(50);
-
-            Update();
-
-            int len = recvfrom(fd_, buf, 1024 * 4, 0, reinterpret_cast<sockaddr *>(&addr), &sock_len);
-
-            if (CheckError(len))
-               continue;
-               
-            Handle(addr,sock_len,std::string(buf,len));
-         }
-      }
-
-      void SetMessageCallBack(const MessageCallBack &cb)    { msg_cb_ = cb;       }
-      void SetNewClientCallBack(const NewClientCallBack &cb){ new_client_cb_ = cb;}
-      void SetCloseCallBack(const CloseCallBack &cb)        { close_cb_ = cb;     }
+        static constexpr uint32_t body_size = 1024 * 4;
+protected:
+        virtual void HandleClose(const KcpSession::ptr& session) = 0;
+        virtual void HandleMessage(const KcpSession::ptr& session,const std::string &msg) = 0;
+        virtual void HandleConnection(const KcpSession::ptr& session) = 0;
 
 private:
-      bool CheckError(int ret)
-      {
-         if (ret == -1)
-         {
-            if (errno != EAGAIN)
-               perror("recvfrom error!");
-            return true;
-         }
-         return false;
-      }
-      
-      void Update()
-      {
-         for (auto it = kcp_map_.begin(); it != kcp_map_.end();)
-         {
-            if (it->second->Update(clock()))
-            {
-               close_cb_(it->second,it->first);
-               it = kcp_map_.erase(it);
-            }else
-            {
-               ++it;
-            }
-         }
-      }
-      
-      void Handle(sockaddr_in &addr,socklen_t socklen,const std::string &str)
-      {
-            std::stringstream ss;
-
-            Addr user_addr{inet_ntoa(addr.sin_addr),ntohs(addr.sin_port)};
-
-
-            if (kcp_map_.find(user_addr) == kcp_map_.end())
-            {
-                auto pcon = NewClient(addr,socklen);
-                TRACE("new client from ",user_addr.first,user_addr.second);
-                kcp_map_[user_addr] = pcon;
-                new_client_cb_(pcon,user_addr);
-            }
-
-            auto pcon = kcp_map_[user_addr];
-            
-            int ret = pcon->Input(const_cast<char*>(str.data()),str.length()); 
-
-            if(ret < 0)
-            {
-                TRACE("Input error = ",ret);
-                return;
-            }
-
-            std::string msg(1024 * 4,'a');
-            
-            int len = pcon->Recv(const_cast<char*>(msg.data()),msg.length());
-            
-            if(len == 0)
-              return;
-
-            if(len == -1)
-            {
-               TRACE("user data too long");
-               exit(-1);
-            }
-
-            msg.resize(len);
-
-            pool_.Put([this,pcon,msg,user_addr]()
-            {
-                  msg_cb_(pcon,user_addr,msg);
-            });
-      }
-
-      kcp::Kcp<true>::ptr NewClient(sockaddr_in &addr,socklen_t socklen)
-      {
-         kcp::KcpOpt opt;
-         opt.interval            = 50;
-         opt.conv                = conv_;
-         opt.offline_standard    = 1000;
-
-         opt.send_func = [addr,socklen,this](const void *data, std::size_t size, void *kcp)
-         {
-            int len = sendto(fd_, data, size, 0, (sockaddr *)&addr,socklen);
-            if (len == -1)
-            {
-                  perror("sendto error!");
-                  TRACE("errno =",errno);
-            }
-         };
-
-         return std::make_shared<kcp::Kcp<true>>(opt);
-      }
-      void Init()
-      {
-         fd_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-         if (fd_ == -1)
-            perror("create socket failed!");
-
-         sockaddr_in addr;
-         addr.sin_family = AF_INET;
-         addr.sin_port = htons(port_);
-         addr.sin_addr.s_addr = inet_addr(ip_.c_str());
-
-         if (bind(fd_, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) == -1)
-            perror("bind error!");
-
-         int flag = fcntl(fd_, F_GETFL);
-         fcntl(fd_, F_SETFL, flag | O_NONBLOCK);
-      }
-
+        using SessionMap = std::unordered_map<uint64_t,KcpSession::ptr>;
 private:
-         int                                 fd_;
-         uint16_t                            port_;
-         uint16_t                            conv_;
-         std::string                         ip_;
-         ThreadPool                          pool_;
-         MessageCallBack                     msg_cb_;
-         NewClientCallBack                   new_client_cb_;
-         CloseCallBack                       close_cb_;
-         std::map<Addr, kcp::Kcp<true>::ptr> kcp_map_;
+        UdpSocket::ptr     socket_;
+        ThreadPool         pool_;
+        SessionMap         sessions_;
+        std::vector<char>  buf_;
 };
+
+KcpServer::KcpServer(const std::string &ip,uint16_t port) : socket_(std::make_shared<UdpSocket>(ip,port,AF_INET)),buf_(body_size)
+{
+    if(!socket_->Bind())
+    {
+        exit(-1);
+    }
+    socket_->SetNoblock();
+}
+
+
+void KcpServer::Update()
+{
+     for(auto it = sessions_.begin(); it != sessions_.end();)
+     {
+         if(!it->second->Update(iclock64()))
+         {  
+            ++it;
+            continue;
+         }
+         HandleClose(it->second);
+         it = sessions_.erase(it);
+     } 
+}
+
+bool KcpServer::Check(int ret)
+{
+       if(ret == -1)
+       {
+          if(errno != EAGAIN)
+             perror("recvform error!");
+         
+          return false;
+       }
+
+       if(ret < kcp::KcpAttr::KCP_HEADER_SIZE)
+         return false;
+      
+       return true;
+}
+
+KcpSession::ptr KcpServer::GetSession(uint64_t conv,const sockaddr_in &addr)
+{
+      auto it = sessions_.find(conv);
+       
+      if(it == sessions_.end())
+         sessions_[conv] = NewSession(conv,addr);
+       
+      KcpSession::ptr session = sessions_[conv];
+
+      const sockaddr_in &session_addr = session->GetAddr();
+
+      if(session_addr.sin_port != addr.sin_port || 
+         session_addr.sin_addr.s_addr != addr.sin_addr.s_addr)
+      {
+          session->SetAddr(addr);
+      }
+
+      return session;
+}
+
+KcpSession::ptr KcpServer::NewSession(uint64_t conv,const sockaddr_in &addr)
+{
+     kcp::KcpOpt opt;
+     opt.conv                = conv;
+     opt.interval            = 1;
+     //opt.nodelay             = true;
+     opt.trigger_fast_resend = 5;
+     opt.offline_standard    = 1000;
+
+     KcpSession::ptr session = std::make_shared<KcpSession>(opt,addr,socket_);  
+     
+     HandleConnection(session);
+
+     return session;
+}
+
+uint64_t KcpServer::GetConv(const void* buf)
+{
+     return *(uint64_t*)(buf);
+}
+void KcpServer::Run(std::size_t threads)
+{
+     pool_.Start(threads);
+     
+     do
+     {   
+         usleep(10);
+
+         Update();
+
+         sockaddr_in addr;
+
+         int len = socket_->RecvFrom(buf_.data(),body_size,addr);
+
+         if(!Check(len))
+           continue;
+      
+         uint64_t conv = GetConv(buf_.data());
+
+         KcpSession::ptr session = GetSession(conv,addr);
+
+         HandleSession(session,len);
+         
+     }while(1);
+}
+
+void KcpServer::HandleSession(const KcpSession::ptr &session,int length)
+{
+      int ret = session->Input(buf_.data(),length);
+      
+      if(ret != 0)
+      {
+         TRACE("Input error = ",ret);
+         return;
+      }
+      
+      do
+      {
+         int len = session->Recv(buf_.data(),body_size);
+
+         if(len == -1)
+         {
+            TRACE("body size too small");
+            exit(-1);
+         }
+
+         if(len == 0)
+           break;
+         
+         std::string msg(buf_.data(),buf_.data() + len);
+         
+         TRACE(msg);
+         
+         pool_.Put([this,session,msg]()
+         {
+            HandleMessage(session,msg);
+         });
+      }while(1);
+
+}
+
+KcpSession::KcpSession(const kcp::KcpOpt &opt,const sockaddr_in &addr,const UdpSocket::ptr &socket) : kcp::Kcp<true>(opt),
+                                                                                                      addr_(addr),
+                                                                                                      socket_(socket)
+{
+     SetSendFunc([this](const void *buf,std::size_t size,void *)
+     {
+            if(socket_->SendTo(buf,size,addr_) == -1)
+              perror("sendto error");
+     });
+}
+
+std::string KcpSession::GetAddrToString() const
+{
+    std::stringstream ss;
+    ss << inet_ntoa(addr_.sin_addr) << ":" << ntohs(addr_.sin_port);
+    return ss.str();
+}

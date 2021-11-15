@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 16:31:14
- * @LastEditTime: 2021-11-13 13:30:31
+ * @LastEditTime: 2021-11-15 22:17:48
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/Kcp.hpp
@@ -26,7 +26,23 @@ namespace kcp{
             return KcpHdr::ptr(new (malloc(KcpAttr::KCP_HEADER_SIZE + len)) KcpHdr(len));
       }
       
-
+      inline std::string  CmdToString(uint8_t cmd)
+      {
+           if(cmd == KcpAttr::KCP_CMD_PONG)
+             return "KCP_CMD_PONG";
+           if(cmd == KcpAttr::KCP_CMD_PING)
+             return "KCP_CMD_PIMG";
+           if(cmd == KcpAttr::KCP_CMD_ACK)
+             return "KCP_CMD_ACK";
+           if(cmd == KcpAttr::KCP_CMD_PUSH)
+             return "KCP_CMD_PUSH";
+           if(cmd == KcpAttr::KCP_CMD_WINS)
+             return "KCP_CMD_WINS";
+           if(cmd == KcpAttr::KCP_CMD_WASK)
+             return "KCP_CMD_WASK";
+           
+           return "unknown cmd";
+      }
       KcpHdr::ptr KcpHdr::Dup(KcpHdr *rhs)
       {
             if(!rhs)
@@ -38,7 +54,7 @@ namespace kcp{
 
             return hdr;
       }
-
+      
        template<bool ThreadSafe>
        int Kcp<ThreadSafe>::Input(void *data, std::size_t size)
        {
@@ -74,11 +90,24 @@ namespace kcp{
              if(cmd == KcpAttr::KCP_CMD_ACK ||
                 cmd == KcpAttr::KCP_CMD_PUSH||
                 cmd == KcpAttr::KCP_CMD_WASK||
-                cmd == KcpAttr::KCP_CMD_WINS)
+                cmd == KcpAttr::KCP_CMD_WINS||
+                cmd == KcpAttr::KCP_CMD_PING||
+                cmd == KcpAttr::KCP_CMD_PONG)
              {
                   return true;
              }
              return false;
+       }
+       static void TraceHdr(KcpHdr *hdr)
+       {
+             TRACE("hdr->conv",hdr->conv);
+             TRACE("hdr->cmd",CmdToString(hdr->cmd));
+             TRACE("hdr->una",hdr->una);
+             TRACE("hdr->wnd",hdr->wnd);
+             TRACE("hdr->len",hdr->len);
+             TRACE("hdr->sn",hdr->sn);
+             TRACE("hdr->frg",hdr->frg);
+             TRACE("--------------------");
        }
        template<bool ThreadSafe>
        int Kcp<ThreadSafe>::ParserData(char *data,std::size_t size)
@@ -93,6 +122,8 @@ namespace kcp{
                    data   += KcpAttr::KCP_HEADER_SIZE;
                    size   -= KcpAttr::KCP_HEADER_SIZE;
 
+                   //TraceHdr(hdr);
+
                    if(hdr->conv != opt_.conv)
                    {
                       Close();
@@ -100,13 +131,19 @@ namespace kcp{
                    }
 
                    if(size < hdr->len)
-                     return -1;
+                   {
+                      Close();
+                      return -1;
+                   }
                   
                    data  += hdr->len;
                    size  -= hdr->len;
 
                    if(!CheckCmd(hdr->cmd))
-                     return -3;
+                   {
+                      Close();
+                      return -3;
+                   }
                   
                   rmt_wnd_.store(hdr->wnd,std::memory_order_relaxed);
 
@@ -193,7 +230,7 @@ namespace kcp{
        void Kcp<ThreadSafe>::UpdateRto(uint32_t rtt)
        {
             if (rx_srtt_ == 0)
-		    {
+		{
                 rx_srtt_   = rtt;
                 rx_rttval_ = rtt / 2;
             }
@@ -235,6 +272,7 @@ namespace kcp{
        template<bool ThreadSafe>
        void Kcp<ThreadSafe>::ParserCmd(uint32_t cmd,KcpHdr *hdr)
        {
+             rcv_time.store(current_,std::memory_order_relaxed);
              switch (cmd)
              {
              case KcpAttr::KCP_CMD_ACK:
@@ -257,13 +295,19 @@ namespace kcp{
 
                   break;
              }
-             case KcpAttr::KCP_CMD_WINS:
-                   break;
              case KcpAttr::KCP_CMD_WASK:
              {
-                   SetProbeFlag(KcpAttr::KCP_ASK_TELL);
-                   break;
+                  SetProbeFlag(KcpAttr::KCP_ASK_TELL);
+                  break;
              }
+             case KcpAttr::KCP_CMD_PING:
+             {
+                  pong_.store(true,std::memory_order_relaxed);
+                  break;
+             }
+             case KcpAttr::KCP_CMD_PONG:
+             case KcpAttr::KCP_CMD_WINS:
+                   break;
              default:
                    break;
              }
@@ -386,6 +430,9 @@ namespace kcp{
        template <bool ThreadSafe>
        bool Kcp<ThreadSafe>::Update(uint32_t current)
        {
+             if(Offline())
+               return true;
+            
              current_ = current;
 
              if (flush_ts_ == 0)
@@ -421,14 +468,48 @@ namespace kcp{
              CheckWnd();
              // 3.handle window cmd
              HandleWndCmd();
-             // 4.flush buf
+             // 4.check heart beta
+             HeartBeat();
+             // 5.flush buf
              FlushBuf();
-             // 5.move the right boundary of send window
+             // 6.move the right boundary of send window
              MoveSndWndRight();
-             // 6.check whther KcpSeg in the send window need to be sent
+             // 7.check whther KcpSeg in the send window need to be sent
              CheckSndWnd();
        }
+       template<bool ThreadSafe>
+       void Kcp<ThreadSafe>::HeartBeat()
+       {
+            
+            if(rcv_time.load(std::memory_order_acquire) == 0)
+               rcv_time.store(current_,std::memory_order_release);
 
+            if(current_ > rcv_time.load(std::memory_order_relaxed) + KcpAttr::KCP_TIMEOUT)
+            {
+               Close();
+               return;
+            }
+
+            KcpHdr hdr(0);
+            hdr.conv = opt_.conv;
+            hdr.wnd  = GetWndSize();
+            hdr.una  = rcv_next_.load(std::memory_order_relaxed);
+
+
+            if(current_ > rcv_time.load(std::memory_order_relaxed) + KcpAttr::KCP_HEARTBEAT_CHECK)
+            {
+                  hdr.cmd = KcpAttr::KCP_CMD_PING;
+                  buf_.emplace_back(std::make_shared<KcpHdr>(hdr));
+            }
+
+            bool pong = pong_.exchange(false,std::memory_order_relaxed);
+
+            if(pong)
+            {
+                  hdr.cmd = KcpAttr::KCP_CMD_PING;
+                  buf_.emplace_back(std::make_shared<KcpHdr>(hdr));
+            }
+       }
        template <bool ThreadSafe>
        void Kcp<ThreadSafe>::MoveSndWndRight()
        {
@@ -458,7 +539,6 @@ namespace kcp{
                    seg->rts        = current_;
                    seg->fack       = 0;
                    seg->mit        = 0;
-
                    snd_buf_.push_back(std::move(seg));
 
                    snd_queue.pop_front();
@@ -507,6 +587,8 @@ namespace kcp{
              // combine multi kcp packets into a frame of mtu size
              for (auto &hdr : buf_)
              {
+                  
+                   //TraceHdr(hdr.get());
                    if (offset + KcpAttr::KCP_HEADER_SIZE + hdr->len > opt_.mtu)
                    {
                          opt_.send_func(data, offset, this);
@@ -517,6 +599,14 @@ namespace kcp{
 
                    offset += KcpAttr::KCP_HEADER_SIZE + hdr->len;
              }
+
+            //  for(uint32_t i = 0;i < offset;)
+            //  {
+            //       KcpHdr *hdr = (KcpHdr*)(data + i);
+            //       TraceHdr(hdr);
+            //       i += KcpAttr::KCP_HEADER_SIZE;
+            //       i += hdr->len;
+            //  }
 
              opt_.send_func(data, offset, this);
 
@@ -538,12 +628,10 @@ namespace kcp{
                                            seg->data->wnd = GetWndSize();
                                            seg->data->una = rcv_next_.load(std::memory_order_relaxed);
                                            buf_.push_back(seg->data);
+
                                            
                                            if (seg->mit >= opt_.offline_standard)
                                            {
-                                              TRACE("mit = ",seg->mit);
-                                              TRACE("sn = ",seg->data->sn);
-                                              TRACE("len = ",seg->data->len);
                                               Close(); 
                                            }
                                      }
@@ -570,6 +658,7 @@ namespace kcp{
        {
              uint32_t rto_min = opt_.nodelay ? 0 : rx_rto_.load(std::memory_order_relaxed) >> 3;
              
+             //TRACE("seg->rto",seg->rto);
              //first send
              if (seg->mit == 0)
              {
@@ -581,7 +670,7 @@ namespace kcp{
              }
 
              //timeout lead to resend
-             if (current_ - seg->rts >= 0)
+             if (current_ >= seg->rts)
              {
                    lost = true;
 

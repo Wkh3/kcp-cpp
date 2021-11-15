@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 18:54:01
- * @LastEditTime: 2021-11-13 12:54:38
+ * @LastEditTime: 2021-11-15 21:18:12
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/KcpHdr.hpp
@@ -18,19 +18,19 @@
 
 namespace kcp
 {
-
+      #pragma pack(1)
       class KcpHdr
       {
       public:
             using ptr = std::shared_ptr<KcpHdr>;
-            uint16_t conv{0};
+            uint64_t conv{0};
+            uint32_t ts{0};
+            uint32_t sn{0};
+            uint32_t una{0};
             uint16_t len{0};
             uint8_t  cmd{0};
             uint8_t  frg{0};
             uint16_t wnd{0};
-            uint32_t ts{0};
-            uint32_t sn{0};
-            uint32_t una{0};
             char     buf[0];
 
       public:
@@ -40,6 +40,7 @@ namespace kcp
 
             KcpHdr(uint16_t length);
       };
+      #pragma pack()
 
       class KcpSeg
       {
@@ -66,13 +67,17 @@ namespace kcp
             //max rto
             constexpr static uint32_t KCP_RTO_MAX  = 10000;
             //cmd : push data
-            constexpr static uint32_t KCP_CMD_PUSH = 81;
+            constexpr static uint8_t KCP_CMD_PUSH = 81;
             //cmd : ack
-            constexpr static uint32_t KCP_CMD_ACK = 82;
+            constexpr static uint8_t KCP_CMD_ACK = 82;
             //cmd : window probe
-            constexpr static uint32_t KCP_CMD_WASK = 83;
+            constexpr static uint8_t KCP_CMD_WASK = 83;
             //cmd : window tell
-            constexpr static uint32_t KCP_CMD_WINS = 84;
+            constexpr static uint8_t KCP_CMD_WINS = 84;
+            //cmd : ping
+            constexpr static uint8_t KCP_CMD_PING = 85;
+            //cmd : pong
+            constexpr static uint8_t KCP_CMD_PONG = 86;
             //update timer interval
             constexpr static uint32_t KCP_INTERVAL = 100;
             //maximum transmission unit
@@ -100,22 +105,26 @@ namespace kcp
             //Header size
             constexpr static uint32_t KCP_HEADER_SIZE = sizeof(KcpHdr);
             //connection state online
-            constexpr static int8_t KCP_ONLINE  = 1;
+            constexpr static int8_t   KCP_ONLINE  = 1;
             //connection state offline
-            constexpr static int8_t KCP_OFFLINE = -1;
+            constexpr static int8_t   KCP_OFFLINE = -1;
             //resend times greater than it will be judged offline
-            constexpr static uint32_t KCP_OFFLINE_STANDARD = 20;
+            constexpr static uint32_t KCP_OFFLINE_STANDARD = 50;
             //max frg length
             constexpr static uint32_t KCP_FRG_LIMIT = (1 << 8) - 1;
+            //the interval for sending heartbeat packets
+            constexpr static uint32_t KCP_HEARTBEAT_CHECK = 1500;
+            //timeout in millisecond
+            constexpr static uint32_t KCP_TIMEOUT  = 1500 * 8;
       };
-     
+
       class KcpOpt
       {
       public:
             using SendFunc = std::function<void(const void *buf, int len, void *kcp)>;
       public:
             //conv id identify the same session
-            uint16_t conv;
+            uint64_t conv;
             //maximum transmission unit
             uint16_t mtu{KcpAttr::KCP_MTU_DEF};
             //maximum segment size = mtu - KCP_OVERHEAD
@@ -134,10 +143,12 @@ namespace kcp
             uint32_t snd_queue_max_size{KcpAttr::KCP_SND_QUEUE_MAX_SIZE};
             //if the number of recved ack which grater than it's sn is greater than this,fast resend will be trrigered
             uint32_t trigger_fast_resend{0};
+            //the interval for sending heartbeat packets
+            uint32_t heartbeat{KcpAttr::KCP_HEARTBEAT_CHECK};
             //Turning it on will increase RTO by 1.5 times;
-            bool nodelay{false};
+            bool     nodelay{false};
             //whether use congesition control
-            bool use_congesition{false};
+            bool     use_congesition{false};
             //send func callback
             SendFunc send_func;
       };
@@ -170,7 +181,7 @@ namespace kcp
              * @brief  receive a user packet from Kcp
              * @param[in,out] data  
              * @param[in]  size  
-             * @return  -1 : the size of buf greater data size | > 0 : data size
+             * @return  -1 : the size of buf greater data size | 0 : empty | > 0 : data size
              */
             int Recv(void *buf, uint32_t size);
 
@@ -257,6 +268,10 @@ namespace kcp
              * @brief: get the first size of whole user packet in recv_queue_ 
              */                     
             std::size_t PeekSize();
+            /**
+             * @brief: check heart beat
+             */     
+            void HeartBeat();
 
             std::size_t GetWndSize();
 
@@ -287,7 +302,9 @@ namespace kcp
             Atomic<uint32_t>        rmt_wnd_          {KcpAttr::KCP_WND_RCV};
             Atomic<uint32_t>        snd_unack_        {0};
             Atomic<uint32_t>        snd_next_         {0};
-            Atomic<uint32_t>        rx_rto_           {0};
+            Atomic<uint32_t>        rcv_time          {0};
+            Atomic<uint32_t>        rx_rto_           {KcpAttr::KCP_RTO_DEF};
+            Atomic<bool>            pong_             {false};
             Control                 control_          {nullptr};
             std::mutex              control_mtx_;
             KcpOpt                  opt_;

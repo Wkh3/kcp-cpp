@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-10 15:28:30
- * @LastEditTime: 2021-11-12 12:59:09
+ * @LastEditTime: 2021-11-15 22:56:49
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/util.hpp
@@ -13,6 +13,7 @@
 #include <iostream>
 #include <atomic>
 #include <mutex>
+#include <sys/time.h>
 #include <list>
 
 namespace kcp
@@ -135,4 +136,42 @@ namespace kcp
             return std::min(std::max(lower,middle),upper);
     }
 
+}
+
+/* get system time */
+static inline void itimeofday(long *sec, long *usec)
+{
+	#if defined(__unix)
+	struct timeval time;
+	gettimeofday(&time, NULL);
+	if (sec) *sec = time.tv_sec;
+	if (usec) *usec = time.tv_usec;
+	#else
+	static long mode = 0, addsec = 0;
+	BOOL retval;
+	static IINT64 freq = 1;
+	IINT64 qpc;
+	if (mode == 0) {
+		retval = QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
+		freq = (freq == 0)? 1 : freq;
+		retval = QueryPerformanceCounter((LARGE_INTEGER*)&qpc);
+		addsec = (long)time(NULL);
+		addsec = addsec - (long)((qpc / freq) & 0x7fffffff);
+		mode = 1;
+	}
+	retval = QueryPerformanceCounter((LARGE_INTEGER*)&qpc);
+	retval = retval * 2;
+	if (sec) *sec = (long)(qpc / freq) + addsec;
+	if (usec) *usec = (long)((qpc % freq) * 1000000 / freq);
+	#endif
+}
+
+/* get clock in millisecond 64 */
+static inline int64_t iclock64()
+{
+	long s, u;
+	int64_t value;
+	itimeofday(&s, &u);
+	value = ((int64_t)s) * 1000 + (u / 1000);
+	return value;
 }
