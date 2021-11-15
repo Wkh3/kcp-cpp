@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-12 23:22:23
- * @LastEditTime: 2021-11-15 23:19:43
+ * @LastEditTime: 2021-11-16 00:22:03
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/ChatServer.cpp
@@ -20,7 +20,7 @@ public:
         {
             //TRACE(msg);
             std::stringstream ss;
-            ss << "user from [" << session->GetAddrToString() << "] "<< msg;
+            ss << "user from [" << session->GetAddrToString() << "] : " << msg;
             Notify(ss.str());
         }
         void HandleConnection(const KcpSession::ptr &session)

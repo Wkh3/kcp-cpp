@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 16:31:14
- * @LastEditTime: 2021-11-15 22:17:48
+ * @LastEditTime: 2021-11-16 00:48:09
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/Kcp.hpp
@@ -12,7 +12,7 @@
 #include <string.h>
 #include <functional>
 #include <Trace.hpp>
-#include <control.hpp>
+#include <Control.hpp>
 #include <algorithm>
 #include <KcpHdr.hpp>
 

@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-11 21:27:17
- * @LastEditTime: 2021-11-15 23:20:16
+ * @LastEditTime: 2021-11-16 00:24:29
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/example/KcpServer.hpp
@@ -136,8 +136,8 @@ KcpSession::ptr KcpServer::NewSession(uint64_t conv,const sockaddr_in &addr)
 {
      kcp::KcpOpt opt;
      opt.conv                = conv;
-     opt.interval            = 1;
-     //opt.nodelay             = true;
+     opt.interval            = 10;
+     opt.nodelay             = true;
      opt.trigger_fast_resend = 5;
      opt.offline_standard    = 1000;
 
