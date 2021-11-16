@@ -1,10 +1,10 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 19:28:02
- * @LastEditTime: 2021-11-10 16:07:48
+ * @LastEditTime: 2021-11-16 18:56:18
  * @LastEditors: wkh
  * @Description: 
- * @FilePath: /kcp-cpp/include/control.hpp
+ * @FilePath: /kcp-cpp/include/Control.hpp
  * 
  */
 #pragma once
@@ -55,6 +55,10 @@ namespace kcp
                   ssthresh  = std::max(ssthresh / 2,1u) ;
                   cwnd      = ssthresh + fast_resend_trigger;
               }
+
+              virtual void SetRtt(uint32_t rtt){}
+
+              virtual void SetMss(uint32_t mss){}
 
               virtual ~CongestionControl() {}
        };

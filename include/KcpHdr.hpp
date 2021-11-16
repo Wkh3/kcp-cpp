@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 18:54:01
- * @LastEditTime: 2021-11-16 18:19:36
+ * @LastEditTime: 2021-11-16 19:54:20
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/KcpHdr.hpp
@@ -150,7 +150,7 @@ namespace kcp
             //Turning it on will increase RTO by 1.5 times;
             bool     nodelay{false};
             //whether use congesition control
-            bool     use_congesition{false};
+            bool     use_congestion{false};
             //send func callback
             SendFunc send_func;
       };
