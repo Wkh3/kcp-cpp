@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 16:31:14
- * @LastEditTime: 2021-11-16 18:19:19
+ * @LastEditTime: 2021-11-16 19:59:35
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/Kcp.hpp
@@ -68,7 +68,7 @@ namespace kcp{
             if(err != 0)
                return err;
 
-            if(!opt_.use_congesition || !control_)
+            if(!opt_.use_congestion || !control_)
               return 0;
 
             Lock lock(control_mtx_);
@@ -515,7 +515,7 @@ namespace kcp{
              //the size of send window is the minimum in swnd,rmd_wnd and cwnd
              uint32_t swnd = std::min(opt_.snd_wnd_size, rmt_wnd_.load(std::memory_order_relaxed));
 
-             if (opt_.use_congesition)
+             if (opt_.use_congestion)
              {
                   Lock lock(control_mtx_);
                   swnd = std::min(swnd, cwnd_);
@@ -639,7 +639,7 @@ namespace kcp{
             FlushBuf();
 
             {
-                  if(!opt_.use_congesition || (!lost && !fast_resend) || !control_)
+                  if(!opt_.use_congestion || (!lost && !fast_resend) || !control_)
                         return;
                   
                   Lock lock(control_mtx_);
