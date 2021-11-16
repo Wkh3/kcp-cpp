@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 16:31:14
- * @LastEditTime: 2021-11-16 16:18:49
+ * @LastEditTime: 2021-11-16 18:19:19
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/Kcp.hpp
@@ -65,7 +65,6 @@ namespace kcp{
 
             int err = ParserData(src,size);
 
-            //TRACE(this,rcv_queue_.size());
             if(err != 0)
                return err;
 
@@ -99,7 +98,7 @@ namespace kcp{
              return false;
        }
 
-       void KcpHdr::dump() const
+       void KcpHdr::Dump() const
        {
             TRACE("hdr->conv",conv);
             TRACE("hdr->cmd",CmdToString(cmd));

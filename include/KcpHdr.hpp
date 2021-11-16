@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 18:54:01
- * @LastEditTime: 2021-11-16 16:16:31
+ * @LastEditTime: 2021-11-16 18:19:36
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/KcpHdr.hpp
@@ -40,7 +40,7 @@ namespace kcp
 
             KcpHdr(uint16_t length);
 
-            void  dump() const;
+            void  Dump() const;
       };
       #pragma pack()
 
@@ -111,7 +111,7 @@ namespace kcp
             //connection state offline
             constexpr static int8_t   KCP_OFFLINE = -1;
             //resend times greater than it will be judged offline
-            constexpr static uint32_t KCP_OFFLINE_STANDARD = 50;
+            constexpr static uint32_t KCP_OFFLINE_STANDARD = 100;
             //max frg length
             constexpr static uint32_t KCP_FRG_LIMIT = (1 << 8) - 1;
             //the interval for sending heartbeat packets

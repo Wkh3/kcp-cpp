@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-10 15:28:30
- * @LastEditTime: 2021-11-16 00:49:04
+ * @LastEditTime: 2021-11-16 18:18:57
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/util.hpp
@@ -13,7 +13,6 @@
 #include <iostream>
 #include <atomic>
 #include <mutex>
-#include <sys/time.h>
 #include <list>
 
 namespace kcp
@@ -136,23 +135,4 @@ namespace kcp
             return std::min(std::max(lower,middle),upper);
     }
 
-}
-
-/* get system time */
-static inline void itimeofday(long *sec, long *usec)
-{
-	struct timeval time;
-	gettimeofday(&time, NULL);
-	if (sec) *sec = time.tv_sec;
-	if (usec) *usec = time.tv_usec;
-}
-
-/* get clock in millisecond 64 */
-static inline int64_t iclock64()
-{
-	long s, u;
-	int64_t value;
-	itimeofday(&s, &u);
-	value = ((int64_t)s) * 1000 + (u / 1000);
-	return value;
 }
