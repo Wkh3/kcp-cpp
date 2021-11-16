@@ -7,7 +7,7 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include_directories(${PROJECT_SOURCE_DIR}/include)
-
+include_directories(${PROJECT_SOURCE_DIR}/example)
 
 set(TEST OFF)
 
@@ -18,9 +18,4 @@ add_executable(multithread_test test/multithread_test.cpp)
 target_link_libraries(multithread_test pthread)
 endif()
 
-add_executable(ChatServer example/ChatServer.cpp)
-target_link_libraries(ChatServer pthread)
-
-
-add_executable(ChatClient example/ChatClient.cpp)
-target_link_libraries(ChatClient pthread)
+add_subdirectory(${CMAKE_SOURCE_DIR}/example)

@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 18:54:01
- * @LastEditTime: 2021-11-15 21:18:12
+ * @LastEditTime: 2021-11-16 16:16:31
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/KcpHdr.hpp
@@ -39,6 +39,8 @@ namespace kcp
             static KcpHdr::ptr Dup(KcpHdr *rhs);
 
             KcpHdr(uint16_t length);
+
+            void  dump() const;
       };
       #pragma pack()
 

@@ -1,14 +1,14 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-12 23:22:10
- * @LastEditTime: 2021-11-15 23:25:49
+ * @LastEditTime: 2021-11-16 16:28:59
  * @LastEditors: wkh
  * @Description: 
- * @FilePath: /kcp-cpp/example/ChatClient.cpp
+ * @FilePath: /kcp-cpp/example/ChatRoom/ChatClient.cpp
  * 
  */
 
-#include "KcpClient.hpp"
+#include <KcpServer/KcpClient.hpp> 
 #include <thread>
 class ChatClient : KcpClient
 {

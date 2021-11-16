@@ -1,7 +1,7 @@
 /*
  * @Author: wkh
  * @Date: 2021-11-01 16:31:14
- * @LastEditTime: 2021-11-16 00:48:09
+ * @LastEditTime: 2021-11-16 16:18:49
  * @LastEditors: wkh
  * @Description: 
  * @FilePath: /kcp-cpp/include/Kcp.hpp
@@ -26,7 +26,7 @@ namespace kcp{
             return KcpHdr::ptr(new (malloc(KcpAttr::KCP_HEADER_SIZE + len)) KcpHdr(len));
       }
       
-      inline std::string  CmdToString(uint8_t cmd)
+      inline std::string CmdToString(uint8_t cmd)
       {
            if(cmd == KcpAttr::KCP_CMD_PONG)
              return "KCP_CMD_PONG";
@@ -98,16 +98,18 @@ namespace kcp{
              }
              return false;
        }
-       static void TraceHdr(KcpHdr *hdr)
+
+       void KcpHdr::dump() const
        {
-             TRACE("hdr->conv",hdr->conv);
-             TRACE("hdr->cmd",CmdToString(hdr->cmd));
-             TRACE("hdr->una",hdr->una);
-             TRACE("hdr->wnd",hdr->wnd);
-             TRACE("hdr->len",hdr->len);
-             TRACE("hdr->sn",hdr->sn);
-             TRACE("hdr->frg",hdr->frg);
-             TRACE("--------------------");
+            TRACE("hdr->conv",conv);
+            TRACE("hdr->cmd",CmdToString(cmd));
+            TRACE("hdr->ts",ts);
+            TRACE("hdr->una",una);
+            TRACE("hdr->wnd",wnd);
+            TRACE("hdr->len",len);
+            TRACE("hdr->sn",sn);
+            TRACE("hdr->frg",frg);
+            TRACE("--------------------");
        }
        template<bool ThreadSafe>
        int Kcp<ThreadSafe>::ParserData(char *data,std::size_t size)
@@ -121,8 +123,6 @@ namespace kcp{
 
                    data   += KcpAttr::KCP_HEADER_SIZE;
                    size   -= KcpAttr::KCP_HEADER_SIZE;
-
-                   //TraceHdr(hdr);
 
                    if(hdr->conv != opt_.conv)
                    {
