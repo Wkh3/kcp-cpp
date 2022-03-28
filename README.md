@@ -33,7 +33,7 @@ You only need to set the template parameter to true to use it in multi threads.
     kcp::Kcp<true> kcp(opt);
 ```
 
-Thie means you can call `Update`,`Send`,`Recv`,`Input` with multi threads
+This means you can call `Update`,`Send`,`Recv`,`Input` with multi threads
 
 
 ```
