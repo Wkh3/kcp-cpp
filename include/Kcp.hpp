@@ -505,7 +505,7 @@ namespace kcp{
 
             if(pong)
             {
-                  hdr.cmd = KcpAttr::KCP_CMD_PING;
+                  hdr.cmd = KcpAttr::KCP_CMD_PONG;
                   buf_.emplace_back(std::make_shared<KcpHdr>(hdr));
             }
        }
